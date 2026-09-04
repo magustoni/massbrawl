@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mass Brawl</string>
+    <string name="title_activity_main">Mass Brawl</string>
+    <string name="package_name">com.mjgames.massbrawl</string>
+    <string name="custom_url_scheme">com.mjgames.massbrawl</string>
+</resources>
