@@ -23,37 +23,50 @@
     display:flex; align-items:center; justify-content:center;
   }
   #app{
-    position:relative; width:420px; max-width:100vw; height:100vh; max-height:900px;
+    position:relative; width:640px; max-width:100vw; height:100vh; max-height:900px;
     background:
       radial-gradient(circle at 20% 0%, rgba(51,193,255,0.08), transparent 45%),
       radial-gradient(circle at 80% 0%, rgba(255,138,43,0.08), transparent 45%),
       var(--bg);
     display:flex; flex-direction:column; overflow:hidden;
   }
-  #hud{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:14px 16px 8px;
-  }
+  #hud{ display:none; }
   .playerHud{ display:flex; flex-direction:column; align-items:center; gap:4px; }
   .inventory{ display:flex; gap:3px; min-height:18px; color:#9fb3d1; font-size:11px; }
-  .inventory span{ min-width:16px; text-align:center; border-radius:5px; padding:2px 3px; background:var(--panel); }
+  .miniTimer{
+    font-family:'Orbitron', sans-serif; font-weight:600; font-size:11px;
+    color:#cfe3ff; background:transparent; padding:4px 10px; border-radius:8px;
+    min-width:52px; text-align:center; border:1px solid rgba(255,255,255,0.08);
+  }
+  .inventory span{ min-width:16px; text-align:center; border-radius:5px; padding:2px 3px; background:transparent; border:1px solid rgba(255,255,255,0.10); }
   .score{
     font-family:'Orbitron', sans-serif; font-weight:800; font-size:28px;
-    min-width:64px; text-align:center; padding:6px 14px; border-radius:14px;
-    background:var(--panel);
+    min-width:72px; text-align:center; padding:6px 14px; border-radius:14px;
+    background:transparent;
   }
   .score.blue{ color:var(--blue); border:2px solid var(--blue); box-shadow:0 0 14px rgba(51,193,255,0.35) inset; }
   .score.orange{ color:var(--orange); border:2px solid var(--orange); box-shadow:0 0 14px rgba(255,138,43,0.35) inset; }
-  #timer{
-    font-family:'Orbitron', sans-serif; font-weight:600; font-size:18px; letter-spacing:1px;
-    color:#cfe3ff; background:var(--panel); padding:6px 12px; border-radius:10px;
-  }
   #turnIndicator{
-    text-align:center; font-size:13px; letter-spacing:0.3px; color:#9fb3d1; padding:2px 0 6px;
-    min-height:18px;
+    display:none;
   }
   #canvasWrap{ position:relative; flex:1; margin:0 10px 12px; border-radius:18px; overflow:hidden; }
   canvas{ display:block; width:100%; height:100%; touch-action:none; }
+  #gameHud{
+    position:absolute; inset:0; z-index:7;
+    display:block; pointer-events:none;
+    background:transparent; border:none; box-shadow:none;
+  }
+  .boardSide{ position:absolute; display:flex; align-items:center; justify-content:center; gap:8px; min-width:140px; border-radius:12px; border:1px solid transparent; transition:box-shadow 260ms ease, border-color 260ms ease, opacity 260ms ease, transform 260ms ease; }
+  .boardSide.left{ left:12px; bottom:12px; }
+  .boardSide.right{ right:12px; top:12px; transform:rotate(180deg); }
+  .boardSide.left.active{ border-color:var(--blue); box-shadow:0 0 14px rgba(51,193,255,0.85), inset 0 0 12px rgba(51,193,255,0.4); }
+  .boardSide.right.active{ border-color:var(--orange); box-shadow:0 0 14px rgba(255,138,43,0.85), inset 0 0 12px rgba(255,138,43,0.4); }
+  .boardSide:not(.active){ opacity:0.78; }
+  .boardHudPlayer{ display:flex; flex-direction:column; align-items:center; gap:4px; padding:4px 6px; border-radius:12px; background:transparent; }
+  .boardHudPlayer .inventory{ min-height:20px; }
+  .boardHudPlayer .inventory span{ background:transparent; border:1px solid rgba(255,255,255,0.08); }
+  .boardHudPlayer .miniTimer{ min-width:60px; }
+  .boardHudPlayer .score{ font-size:24px; min-width:70px; padding:6px 12px; background:transparent; }
   #overlay{
     position:absolute; inset:0; background:rgba(3,6,12,0.86);
     display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px;
@@ -62,15 +75,40 @@
   #overlay.hidden{ display:none; }
   #overlayTitle{ font-family:'Orbitron', sans-serif; font-size:30px; margin:0; }
   #overlaySub{ color:#9fb3d1; margin:0; font-size:14px; max-width:280px; }
+  #helpPanel{
+    position:absolute;
+    right:12px; top:46px; bottom:46px;
+    z-index:11;
+    width:34px;
+    min-width:34px;
+    max-width:34px;
+    background:rgba(11,17,32,0.84);
+    border:1px solid rgba(255,255,255,0.16);
+    border-radius:10px;
+    padding:12px 0;
+    color:#eaf2ff;
+    box-shadow:0 10px 26px rgba(0,0,0,0.7);
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform:rotate(180deg);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  #helpPanel.visible{ display:flex; }
+  #helpPanel h2{ display:none; }
+  #helpPanel p{ margin:0; color:#eaf2ff; font-size:11px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transform:rotate(180deg); }
   button{
     font-family:'Rubik', sans-serif; font-weight:700; font-size:15px;
     padding:12px 26px; border-radius:24px; border:none; cursor:pointer;
     background:linear-gradient(135deg, var(--blue), var(--orange)); color:#04101c;
   }
   #howto{
-    position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:50%;
+    position:absolute; right:12px; top:50%; width:34px; height:34px; border-radius:50%;
     background:var(--panel); color:#cfe3ff; display:flex; align-items:center; justify-content:center;
-    font-size:14px; cursor:pointer; z-index:6; border:1px solid rgba(255,255,255,0.15);
+    font-size:16px; cursor:pointer; z-index:6; border:1px solid rgba(255,255,255,0.15);
+    transform:translateY(-50%) rotate(90deg);
   }
   #menuOverlay{
     position:absolute; inset:0; background:
@@ -106,13 +144,24 @@
 <body>
 <div id="app">
   <div id="howto" title="Cómo jugar">?</div>
-  <div id="hud">
-    <div class="playerHud"><div id="scoreLeft" class="score blue">0</div><div id="inventoryBlue" class="inventory"></div></div>
-    <div id="timer">01:30</div>
-    <div class="playerHud"><div id="scoreRight" class="score orange">0</div><div id="inventoryOrange" class="inventory"></div></div>
-  </div>
-  <div id="turnIndicator">Tu turno — arrastra un orbe azul</div>
   <div id="canvasWrap">
+    <div id="gameHud">
+      <div id="leftBoardSide" class="boardSide left">
+        <div class="boardHudPlayer">
+          <div id="scoreLeft" class="score blue">0</div>
+          <div id="inventoryBlue" class="inventory"></div>
+          <div id="timerLeft" class="miniTimer">01:00</div>
+        </div>
+      </div>
+      <div id="rightBoardSide" class="boardSide right">
+        <div class="boardHudPlayer">
+          <div id="scoreRight" class="score orange">0</div>
+          <div id="inventoryOrange" class="inventory"></div>
+          <div id="timerRight" class="miniTimer">01:00</div>
+        </div>
+      </div>
+    </div>
+    <div id="turnIndicator">Tu turno — arrastra un orbe azul</div>
     <canvas id="game"></canvas>
     <div id="menuOverlay">
       <h1 id="menuTitle">MASS <span>BRAWL</span></h1>
@@ -125,6 +174,10 @@
         <strong>Jugar contra otra persona</strong>
         <small>Mismo dispositivo, turnos alternos</small>
       </button>
+    </div>
+    <div id="helpPanel">
+      <h2>MASS BRAWL</h2>
+      <p id="helpText">Tú mandas el azul. Arrastra un orbe hacia atrás y suéltalo.</p>
     </div>
     <div id="overlay" class="hidden">
       <h1 id="overlayTitle">¡Victoria!</h1>
@@ -144,7 +197,10 @@
   const scoreRightEl = document.getElementById('scoreRight');
   const inventoryBlueEl = document.getElementById('inventoryBlue');
   const inventoryOrangeEl = document.getElementById('inventoryOrange');
-  const timerEl = document.getElementById('timer');
+  const timerLeftEl = document.getElementById('timerLeft');
+  const timerRightEl = document.getElementById('timerRight');
+  const leftBoardSide = document.getElementById('leftBoardSide');
+  const rightBoardSide = document.getElementById('rightBoardSide');
   const turnEl = document.getElementById('turnIndicator');
   const overlay = document.getElementById('overlay');
   const overlayTitle = document.getElementById('overlayTitle');
@@ -152,6 +208,8 @@
   const restartBtn = document.getElementById('restartBtn');
   const backToMenuBtn = document.getElementById('backToMenuBtn');
   const howto = document.getElementById('howto');
+  const helpPanel = document.getElementById('helpPanel');
+  const helpText = document.getElementById('helpText');
   const menuOverlay = document.getElementById('menuOverlay');
   const modeAiBtn = document.getElementById('modeAiBtn');
   const modePvpBtn = document.getElementById('modePvpBtn');
@@ -172,13 +230,14 @@
   const POWER = 0.045;
   const MAX_MASS = 5;
   const INVENTORY_SIZE = 5;
-  const MATCH_TIME = 90;
+  const TURN_SECONDS = 60;
 
   let orbs = [];
   let dragOrb = null, dragStart = null, dragCurrent = null;
   let turn = 'player'; // 'player' | 'ai'  (in pvp mode, 'ai' just means "player 2 / orange")
   let busy = false; // orbs moving, no input allowed
-  let timeLeft = MATCH_TIME;
+  let playerTimeLeft = TURN_SECONDS;
+  let aiTimeLeft = TURN_SECONDS;
   let lastTs = null;
   let gameOver = false;
   let started = false;
@@ -227,12 +286,23 @@
   function turnLabel(){
     if (turn === 'player') {
       return mode === 'pvp'
-        ? 'Jugador 1 (azul) — arrastra un orbe y suelta'
-        : 'Tu turno — arrastra un orbe azul hacia atrás y suelta';
+        ? 'Jugador 1 (azul): arrastra un orbe y suelta'
+        : 'Tu turno: arrastra un orbe azul hacia atrás y suelta';
     }
     return mode === 'pvp'
-      ? 'Jugador 2 (naranja) — arrastra un orbe y suelta'
+      ? 'Jugador 2 (naranja): arrastra un orbe y suelta'
       : 'Turno rival…';
+  }
+
+  function buildHelpText(){
+    if (mode === 'pvp') {
+      return turn === 'player'
+        ? 'Jugador 1 (azul): lanza hacia el campo rival.'
+        : 'Jugador 2 (naranja): lanza desde tu lado del tablero.';
+    }
+    return turn === 'player'
+      ? 'Tú mandas el azul: arrastra un orbe hacia atrás y suéltalo.'
+      : 'La IA juega el naranja: observa el campo.';
   }
 
   function newGame(){
@@ -242,13 +312,17 @@
     renderInventory();
     turn = 'player';
     busy = false;
-    timeLeft = MATCH_TIME;
+    playerTimeLeft = TURN_SECONDS;
+    aiTimeLeft = TURN_SECONDS;
     gameOver = false;
     started = true;
     clearTimeout(aiTimer); aiTimer = null;
     overlay.classList.add('hidden');
     menuOverlay.classList.add('hidden');
     turnEl.textContent = turnLabel();
+    helpText.textContent = buildHelpText();
+    updateTurnUI();
+    updateTimerDisplay();
     lastTs = null;
     requestAnimationFrame(loop);
   }
@@ -277,14 +351,12 @@
   }
 
   function onDown(e){
-    if (busy || gameOver || !started) return;
+    if (busy || gameOver || !started || !canPlay(turn)) return;
     const p = pointerPos(e);
-    const o = orbAt(p.x, p.y);
-    if (o && o.team === turn && isStationary(o)) {
-      dragOrb = o; dragStart = p; dragCurrent = p;
-      e.preventDefault();
-    } else if (!o &&
-      ((turn === 'player' && p.y > H-bandHeight()) || (turn === 'ai' && p.y < bandHeight()))) {
+
+    // Solo se lanzan orbes nuevos desde la zona de lanzamiento del equipo activo.
+    // Los orbes ya presentes en el tablero quedan inmóviles y no se pueden arrastrar.
+    if ((turn === 'player' && p.y > H-bandHeight()) || (turn === 'ai' && p.y < bandHeight())) {
       if (startInventoryDrag(turn, p)) e.preventDefault();
     }
   }
@@ -404,17 +476,69 @@
     return inventory[team].length > 0;
   }
 
+  function formatTime(seconds){
+    const safe = Math.max(0, Math.ceil(seconds));
+    const mm = Math.floor(safe / 60);
+    const ss = safe % 60;
+    return `${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+  }
+
+  function updateTurnUI(){
+    leftBoardSide.classList.toggle('active', turn === 'player');
+    rightBoardSide.classList.toggle('active', turn === 'ai');
+  }
+
+  function updateTimerDisplay(){
+    timerLeftEl.textContent = formatTime(playerTimeLeft);
+    timerRightEl.textContent = formatTime(aiTimeLeft);
+  }
+
+  function hasOrbsForTeam(team){
+    return inventory[team].length > 0 || orbs.some(o => o.team === team);
+  }
+
+  function canPlay(team){
+    if (team === 'player') return hasOrbsForTeam('player') && playerTimeLeft > 0;
+    return hasOrbsForTeam('ai') && aiTimeLeft > 0;
+  }
+
+  function checkGameEnd(){
+    const noPlayerOrbs = !hasOrbsForTeam('player');
+    const noAiOrbs = !hasOrbsForTeam('ai');
+    const playerOutTime = playerTimeLeft <= 0;
+    const aiOutTime = aiTimeLeft <= 0;
+
+    if ((noPlayerOrbs && noAiOrbs) ||
+        (playerOutTime && aiOutTime) ||
+        (playerOutTime && noAiOrbs) ||
+        (aiOutTime && noPlayerOrbs)) {
+      endGame();
+      return true;
+    }
+
+    return false;
+  }
+
   function endTurn(){
     clearTimeout(aiTimer);
     aiTimer = null;
+
     const nextTurn = turn === 'player' ? 'ai' : 'player';
-    if (hasAvailableOrb(nextTurn)) {
+
+    if (canPlay(nextTurn)) {
       turn = nextTurn;
-    } else if (!hasAvailableOrb(turn)) {
-      endGame();
+    } else if (canPlay(turn)) {
+      // Se mantiene el turno del jugador actual si el rival ya no puede jugar.
+    } else {
+      checkGameEnd();
       return;
     }
+
     turnEl.textContent = turnLabel();
+    helpText.textContent = buildHelpText();
+    updateTurnUI();
+    updateTimerDisplay();
+
     if (turn === 'ai' && mode === 'ai'){
       aiTimer = setTimeout(()=>{ if(!gameOver) aiPlay(); }, 650);
     }
@@ -425,7 +549,8 @@
     clearTimeout(aiTimer); aiTimer = null;
     const s = computeScores();
     let title;
-    if (mode === 'pvp'){
+
+    if (mode === 'pvp') {
       if (s.player > s.ai) title = 'Gana el Jugador 1 (azul)';
       else if (s.ai > s.player) title = 'Gana el Jugador 2 (naranja)';
       else title = 'Empate';
@@ -434,6 +559,7 @@
       else if (s.ai > s.player) title = 'Perdiste';
       else title = 'Empate';
     }
+
     overlayTitle.textContent = title;
     overlaySub.textContent = `${s.player} — ${s.ai}`;
     overlay.classList.remove('hidden');
@@ -525,18 +651,40 @@
           busy = false;
           if (!gameOver) endTurn();
         }
-      } else if (!dragOrb && !hasAvailableOrb(turn)) {
+      } else if (!dragOrb && !canPlay(turn)) {
         endTurn();
       } else if (!dragOrb && !gameOver && !aiTimer){
         // idle, waiting for input (player) - nothing
       }
 
-      if (!dragOrb){
-        timeLeft -= dt;
-        if (timeLeft <= 0){ timeLeft = 0; endGame(); }
+      if (!gameOver) {
+        if (turn === 'player') {
+          playerTimeLeft = Math.max(0, playerTimeLeft - dt);
+          if (playerTimeLeft === 0) {
+            if (canPlay('ai')) {
+              turn = 'ai';
+              turnEl.textContent = turnLabel();
+              helpText.textContent = buildHelpText();
+              updateTurnUI();
+            }
+          }
+        } else {
+          aiTimeLeft = Math.max(0, aiTimeLeft - dt);
+          if (aiTimeLeft === 0) {
+            if (canPlay('player')) {
+              turn = 'player';
+              turnEl.textContent = turnLabel();
+              helpText.textContent = buildHelpText();
+              updateTurnUI();
+            }
+          }
+        }
       }
-      const mm = Math.floor(timeLeft/60), ss = Math.floor(timeLeft%60);
-      timerEl.textContent = `${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+
+      if (!gameOver) {
+        updateTimerDisplay();
+        checkGameEnd();
+      }
 
       const s = computeScores();
       scoreLeftEl.textContent = s.player;
@@ -556,10 +704,14 @@
   modeAiBtn.addEventListener('click', ()=>{ mode='ai'; newGame(); });
   modePvpBtn.addEventListener('click', ()=>{ mode='pvp'; newGame(); });
   howto.addEventListener('click', ()=>{
-    const msg = mode === 'pvp'
-      ? 'MASS BRAWL — Prototipo\n\nArrastra uno de tus orbes hacia atrás y suelta para lanzarlo como un tirachinas.\nCada orbe vale puntos según su número.\nGanas puntos por cada orbe tuyo que quede en el campo contrario cuando el tiempo se acabe.\nUsa los rebotes en las paredes y los choques entre orbes a tu favor.\nTurnos alternos: Jugador 1 (azul) y Jugador 2 (naranja), en el mismo dispositivo.'
-      : 'MASS BRAWL — Prototipo\n\nArrastra uno de tus orbes (azules) hacia atrás y suelta para lanzarlo como un tirachinas.\nCada orbe vale puntos según su número.\nGanas puntos por cada orbe tuyo que quede en el campo rival cuando el tiempo se acabe.\nUsa los rebotes en las paredes y los choques entre orbes a tu favor.\nTurnos alternos: tú y la IA.';
-    alert(msg);
+    helpText.textContent = buildHelpText();
+    const isVisible = helpPanel.classList.toggle('visible');
+    howto.style.display = isVisible ? 'none' : 'flex';
+  });
+
+  helpPanel.addEventListener('click', ()=>{
+    helpPanel.classList.remove('visible');
+    howto.style.display = 'flex';
   });
 
   // Muestra el tablero vacío detrás del menú antes de elegir modo
