@@ -231,6 +231,10 @@
   const MAX_MASS = 5;
   const INVENTORY_SIZE = 5;
   const TURN_SECONDS = 60;
+  const BOMB_PROBABILITY = 0.75;
+  const BOMB_RADIUS_BASE = 34;
+  const BOMB_RADIUS_PER_MASS = 6;
+  const FINAL_VISUAL_DELAY_SECONDS = 2;
 
   let orbs = [];
   let dragOrb = null, dragStart = null, dragCurrent = null;
@@ -243,6 +247,8 @@
   let started = false;
   let mode = 'ai'; // 'ai' | 'pvp'
   let aiTimer = null;
+  let finalDelayTimer = null;
+  let explosions = [];
 
   function centerX(){ return W/2; }
   function bandHeight(){ return H/4; }
@@ -258,26 +264,32 @@
   let nextOrbId = 0;
 
   function renderInventory(){
-    inventoryBlueEl.innerHTML = inventory.player.map(value => `<span>${value}</span>`).join('');
-    inventoryOrangeEl.innerHTML = inventory.ai.map(value => `<span>${value}</span>`).join('');
+    inventoryBlueEl.innerHTML = inventory.player.map(item => `<span>${item.bomb ? '✹' + item.value : item.value}</span>`).join('');
+    inventoryOrangeEl.innerHTML = inventory.ai.map(item => `<span>${item.bomb ? '✹' + item.value : item.value}</span>`).join('');
   }
 
   function randomInventory(){
-    return Array.from({length: INVENTORY_SIZE}, () => 1 + Math.floor(Math.random() * MAX_MASS));
+    return Array.from({length: INVENTORY_SIZE}, () => {
+      const value = 1 + Math.floor(Math.random() * MAX_MASS);
+      return { value, bomb: Math.random() < BOMB_PROBABILITY };
+    });
   }
 
-  function createInventoryOrb(team, value, point){
+  function createInventoryOrb(team, item, point){
+    const value = item.value ?? item;
+    const bomb = item.bomb ?? false;
     const r = 14 + value*1.6;
     return {
-      id: `orb${nextOrbId++}`, team, value, r,
+      id: `orb${nextOrbId++}`, team, value, bomb, r,
+      bombRadius: bomb ? BOMB_RADIUS_BASE + value * BOMB_RADIUS_PER_MASS : 0,
       x: point ? point.x : W/2, y: point ? point.y : launchY(team), vx: 0, vy: 0
     };
   }
 
   function startInventoryDrag(team, point){
     if (team !== turn || !inventory[team].length) return false;
-    const value = inventory[team].pop();
-    dragOrb = createInventoryOrb(team, value, point);
+    const item = inventory[team].pop();
+    dragOrb = createInventoryOrb(team, item, point);
     dragStart = point; dragCurrent = point;
     renderInventory();
     return true;
@@ -317,6 +329,7 @@
     gameOver = false;
     started = true;
     clearTimeout(aiTimer); aiTimer = null;
+    clearTimeout(finalDelayTimer); finalDelayTimer = null;
     overlay.classList.add('hidden');
     menuOverlay.classList.add('hidden');
     turnEl.textContent = turnLabel();
@@ -329,6 +342,7 @@
 
   function backToMenu(){
     clearTimeout(aiTimer); aiTimer = null;
+    clearTimeout(finalDelayTimer); finalDelayTimer = null;
     started = false;
     gameOver = false;
     overlay.classList.add('hidden');
@@ -382,7 +396,7 @@
         : (turn === 'player' ? 'Orbe en juego…' : 'La IA está jugando…');
       orbs.push(dragOrb);
     } else if (!orbs.includes(dragOrb)) {
-      inventory[dragOrb.team].push(dragOrb.value);
+      inventory[dragOrb.team].push({ value: dragOrb.value, bomb: dragOrb.bomb });
       renderInventory();
     }
     dragOrb = null; dragStart = null; dragCurrent = null;
@@ -400,6 +414,49 @@
   }
   function allStationary(){
     return orbs.every(isStationary);
+  }
+
+  function detonateBombs(){
+    const stationaryBombs = orbs.filter(o => o.bomb && isStationary(o));
+    const contactBombs = orbs.filter(o => o.bomb && orbs.some(x => x !== o && x.team !== o.team && Math.hypot(x.x-o.x, x.y-o.y) <= o.bombRadius));
+    const bombSources = new Map();
+
+    for (const bomb of stationaryBombs) bombSources.set(bomb.id, bomb);
+    for (const bomb of contactBombs) bombSources.set(bomb.id, bomb);
+
+    if (!bombSources.size) return;
+
+    const blastMarks = [];
+
+    for (const bomb of bombSources.values()) {
+      const victims = orbs.filter(o => o !== bomb && o.team !== bomb.team && Math.hypot(o.x-bomb.x, o.y-bomb.y) <= bomb.bombRadius);
+
+      for (const victim of victims) {
+        victim.value -= bomb.value;
+
+        if (victim.value <= 0) {
+          victim.dead = true;
+        }
+      }
+
+      bomb.dead = true;
+      blastMarks.push({ x: bomb.x, y: bomb.y, radius: bomb.bombRadius, age: 0, maxAge: 0.45 });
+    }
+
+    const remaining = [];
+    for (const o of orbs) {
+      if (o.dead) {
+        continue;
+      }
+      remaining.push(o);
+    }
+
+    orbs = remaining;
+
+    if (blastMarks.length) {
+      explosions.push(...blastMarks);
+      renderInventory();
+    }
   }
 
   function physicsStep(){
@@ -440,7 +497,7 @@
       const o = orbs[i];
       const collector = pickupTeam(o.y);
       if (collector && isStationary(o)) {
-        inventory[collector].push(o.value);
+        inventory[collector].push({ value: o.value, bomb: o.bomb });
         orbs.splice(i, 1);
         renderInventory();
       }
@@ -459,7 +516,8 @@
   function aiPlay(){
     aiTimer = null;
     if (!inventory.ai.length) { endTurn(); return; }
-    const shooter = createInventoryOrb('ai', inventory.ai.pop());
+    const item = inventory.ai.pop();
+    const shooter = createInventoryOrb('ai', item);
     const target = { x: W/2 + (Math.random()-0.5)*W*0.5, y: H*0.7 };
     const dirx = shooter.x-target.x, diry = shooter.y-target.y;
     const len = Math.hypot(dirx,diry) || 1;
@@ -474,6 +532,10 @@
 
   function hasAvailableOrb(team){
     return inventory[team].length > 0;
+  }
+
+  function otherTeam(team){
+    return team === 'player' ? 'ai' : 'player';
   }
 
   function formatTime(seconds){
@@ -494,41 +556,66 @@
   }
 
   function hasOrbsForTeam(team){
-    return inventory[team].length > 0 || orbs.some(o => o.team === team);
+    return inventory[team].length > 0;
   }
 
   function canPlay(team){
-    if (team === 'player') return hasOrbsForTeam('player') && playerTimeLeft > 0;
-    return hasOrbsForTeam('ai') && aiTimeLeft > 0;
+    if (team === 'player') return playerTimeLeft > 0 && hasOrbsForTeam('player');
+    return aiTimeLeft > 0 && hasOrbsForTeam('ai');
   }
 
   function checkGameEnd(){
-    const noPlayerOrbs = !hasOrbsForTeam('player');
-    const noAiOrbs = !hasOrbsForTeam('ai');
-    const playerOutTime = playerTimeLeft <= 0;
-    const aiOutTime = aiTimeLeft <= 0;
-
-    if ((noPlayerOrbs && noAiOrbs) ||
-        (playerOutTime && aiOutTime) ||
-        (playerOutTime && noAiOrbs) ||
-        (aiOutTime && noPlayerOrbs)) {
-      endGame();
-      return true;
+    if (busy || dragOrb || !allStationary()) {
+      return false;
     }
 
-    return false;
+    if (orbs.some(o => o.bomb)) {
+      detonateBombs();
+      return false;
+    }
+
+    const playerNoOrbs = !hasOrbsForTeam('player');
+    const aiNoOrbs = !hasOrbsForTeam('ai');
+    const playerNoTime = playerTimeLeft <= 0;
+    const aiNoTime = aiTimeLeft <= 0;
+
+    const shouldEnd =
+      (playerNoOrbs && aiNoOrbs) ||
+      (playerNoOrbs && aiNoTime) ||
+      (aiNoOrbs && playerNoTime) ||
+      (playerNoTime && aiNoTime) ||
+      (!canPlay('player') && !canPlay('ai'));
+
+    if (!shouldEnd) {
+      return false;
+    }
+
+    if (!finalDelayTimer) {
+      finalDelayTimer = setTimeout(() => {
+        finalDelayTimer = null;
+        endGame();
+      }, FINAL_VISUAL_DELAY_SECONDS * 1000);
+    }
+
+    return true;
   }
 
   function endTurn(){
     clearTimeout(aiTimer);
     aiTimer = null;
 
-    const nextTurn = turn === 'player' ? 'ai' : 'player';
+    const current = turn;
+    const rival = otherTeam(current);
 
-    if (canPlay(nextTurn)) {
-      turn = nextTurn;
-    } else if (canPlay(turn)) {
-      // Se mantiene el turno del jugador actual si el rival ya no puede jugar.
+    if (!canPlay(current) && canPlay(rival)) {
+      turn = rival;
+    } else if (!canPlay(current) && !canPlay(rival)) {
+      checkGameEnd();
+      return;
+    } else if (canPlay(rival)) {
+      turn = rival;
+    } else if (canPlay(current)) {
+      // Se mantiene el turno del jugador actual si el rival no puede jugar.
     } else {
       checkGameEnd();
       return;
@@ -608,6 +695,11 @@
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = color.c; ctx.stroke();
+
+    if (o.bomb) {
+      ctx.beginPath(); ctx.arc(o.x,o.y,o.r+4,0,Math.PI*2); ctx.strokeStyle = 'rgba(255,255,180,0.95)'; ctx.lineWidth = 2; ctx.stroke();
+    }
+
     ctx.restore();
 
     ctx.save();
@@ -617,6 +709,27 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(o.value, o.x, o.y+1);
     ctx.restore();
+  }
+
+  function updateExplosions(dt){
+    if (!explosions.length) return;
+    explosions = explosions
+      .map(e => ({...e, age: e.age + dt}))
+      .filter(e => e.age < e.maxAge);
+  }
+
+  function drawExplosions(){
+    for (const e of explosions) {
+      const life = e.age / e.maxAge;
+      const radius = e.radius * (0.2 + life);
+      ctx.save();
+      ctx.strokeStyle = `rgba(255, 210, 120, ${1-life})`;
+      ctx.fillStyle = `rgba(255, 140, 30, ${0.35*(1-life)})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(e.x, e.y, radius, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(e.x, e.y, radius*0.84, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
   }
 
   function drawDrag(){
@@ -647,7 +760,9 @@
 
       if (busy) {
         physicsStep();
+        detonateBombs();
         if (allStationary()){
+          detonateBombs();
           busy = false;
           if (!gameOver) endTurn();
         }
@@ -658,6 +773,7 @@
       }
 
       if (!gameOver) {
+        updateExplosions(dt);
         if (turn === 'player') {
           playerTimeLeft = Math.max(0, playerTimeLeft - dt);
           if (playerTimeLeft === 0) {
@@ -694,6 +810,7 @@
     drawBoard();
     for (const o of orbs) drawOrb(o);
     if (dragOrb && !orbs.includes(dragOrb)) drawOrb(dragOrb);
+    drawExplosions();
     drawDrag();
 
     requestAnimationFrame(loop);
