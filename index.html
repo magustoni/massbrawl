@@ -32,13 +32,17 @@
   }
   #hud{ display:none; }
   .playerHud{ display:flex; flex-direction:column; align-items:center; gap:4px; }
-  .inventory{ display:flex; gap:3px; min-height:18px; color:#9fb3d1; font-size:11px; }
+  .inventory{ display:flex; gap:3px; min-height:18px; color:#9fb3d1; font-size:11px; pointer-events:auto; }
+  .inventory span{ pointer-events:auto; }
   .miniTimer{
     font-family:'Orbitron', sans-serif; font-weight:600; font-size:11px;
     color:#cfe3ff; background:transparent; padding:4px 10px; border-radius:8px;
     min-width:52px; text-align:center; border:1px solid rgba(255,255,255,0.08);
   }
-  .inventory span{ min-width:16px; text-align:center; border-radius:5px; padding:2px 3px; background:transparent; border:1px solid rgba(255,255,255,0.10); }
+  .inventory span{ min-width:16px; text-align:center; border-radius:5px; padding:2px 3px; background:transparent; border:1px solid transparent; cursor:pointer; }
+  .boardSide.left .inventory span.selected{ color:#fff; border-color:var(--blue); box-shadow:0 0 0 1px var(--blue), 0 0 0 2px rgba(51,193,255,0.2), 0 0 10px rgba(51,193,255,0.8) inset; background:rgba(51,193,255,0.06); transform:none; }
+  .boardSide.right .inventory span.selected{ color:#fff; border-color:var(--orange); box-shadow:0 0 0 1px var(--orange), 0 0 0 2px rgba(255,138,43,0.2), 0 0 10px rgba(255,138,43,0.8) inset; background:rgba(255,138,43,0.06); transform:none; }
+  .inventory span:focus{ outline:1px solid var(--blue); }
   .score{
     font-family:'Orbitron', sans-serif; font-weight:800; font-size:28px;
     min-width:72px; text-align:center; padding:6px 14px; border-radius:14px;
@@ -56,7 +60,7 @@
     display:block; pointer-events:none;
     background:transparent; border:none; box-shadow:none;
   }
-  .boardSide{ position:absolute; display:flex; align-items:center; justify-content:center; gap:8px; min-width:140px; border-radius:12px; border:1px solid transparent; transition:box-shadow 260ms ease, border-color 260ms ease, opacity 260ms ease, transform 260ms ease; }
+  .boardSide{ position:absolute; display:flex; align-items:center; justify-content:center; gap:8px; min-width:140px; border-radius:12px; border:1px solid transparent; pointer-events:auto; transition:box-shadow 260ms ease, border-color 260ms ease, opacity 260ms ease, transform 260ms ease; }
   .boardSide.left{ left:12px; bottom:12px; }
   .boardSide.right{ right:12px; top:12px; transform:rotate(180deg); }
   .boardSide.left.active{ border-color:var(--blue); box-shadow:0 0 14px rgba(51,193,255,0.85), inset 0 0 12px rgba(51,193,255,0.4); }
@@ -231,7 +235,7 @@
   const MAX_MASS = 5;
   const INVENTORY_SIZE = 5;
   const TURN_SECONDS = 60;
-  const BOMB_PROBABILITY = 0.75;
+  const BOMB_PROBABILITY = 0.10;
   const BOMB_RADIUS_BASE = 34;
   const BOMB_RADIUS_PER_MASS = 6;
   const FINAL_VISUAL_DELAY_SECONDS = 2;
@@ -262,10 +266,22 @@
 
   let inventory = { player: [], ai: [] };
   let nextOrbId = 0;
+  let selectedInventory = { player: null, ai: null };
+
+  function inventoryText(item){
+    return item.bomb ? `✹${item.value}` : String(item.value);
+  }
 
   function renderInventory(){
-    inventoryBlueEl.innerHTML = inventory.player.map(item => `<span>${item.bomb ? '✹' + item.value : item.value}</span>`).join('');
-    inventoryOrangeEl.innerHTML = inventory.ai.map(item => `<span>${item.bomb ? '✹' + item.value : item.value}</span>`).join('');
+    const renderTeam = (team, targetEl, key) => {
+      targetEl.innerHTML = inventory[team].map((item, idx) => {
+        const selected = selectedInventory[key] === idx ? 'selected' : '';
+        return `<span class="${selected}" data-index="${idx}">${inventoryText(item)}</span>`;
+      }).join('');
+    };
+
+    renderTeam('player', inventoryBlueEl, 'player');
+    renderTeam('ai', inventoryOrangeEl, 'ai');
   }
 
   function randomInventory(){
@@ -273,6 +289,73 @@
       const value = 1 + Math.floor(Math.random() * MAX_MASS);
       return { value, bomb: Math.random() < BOMB_PROBABILITY };
     });
+  }
+
+  function sortInventoryByValue(items){
+    return [...items].sort((a, b) => a.value - b.value || Number(a.bomb) - Number(b.bomb));
+  }
+
+  function sharedInventoryForBothPlayers(){
+    const base = randomInventory();
+    const sharedOrder = sortInventoryByValue(base.map(item => ({ ...item })));
+
+    return {
+      player: sharedOrder.map(item => ({ ...item })),
+      ai: sharedOrder.map(item => ({ ...item }))
+    };
+  }
+
+  function selectedKeyForTeam(team){
+    return team === 'player' ? 'player' : 'ai';
+  }
+
+  function selectInventoryOrb(team, index){
+    const teamInventory = inventory[team];
+    const selectedKey = selectedKeyForTeam(team);
+
+    if (index < 0 || index >= teamInventory.length) return;
+
+    selectedInventory[selectedKey] = index;
+
+    const chosen = teamInventory[index];
+    const color = team === 'player' ? 'azul' : 'naranja';
+    turnEl.textContent = `Orbe ${color} seleccionado: ${chosen.bomb ? '✹' : ''}${chosen.value}`;
+
+    renderInventory();
+  }
+
+  function clearSelection(team){
+    const key = selectedKeyForTeam(team);
+    selectedInventory[key] = null;
+
+    if (turn === team) {
+      turnEl.textContent = turnLabel();
+    }
+
+    renderInventory();
+  }
+
+  function startInventoryDrag(team, point){
+    if (team !== turn || !inventory[team].length) return false;
+
+    const selectedKey = selectedKeyForTeam(team);
+    const selectedIndex = selectedInventory[selectedKey];
+
+    let item = null;
+    if (selectedIndex !== null && selectedIndex >= 0 && selectedIndex < inventory[team].length) {
+      item = inventory[team].splice(selectedIndex, 1)[0];
+      selectedInventory[selectedKey] = null;
+    } else {
+      item = inventory[team].pop();
+    }
+
+    if (!item) return false;
+
+    dragOrb = createInventoryOrb(team, item, point);
+    dragStart = point;
+    dragCurrent = point;
+    renderInventory();
+    return true;
   }
 
   function createInventoryOrb(team, item, point){
@@ -284,15 +367,6 @@
       bombRadius: bomb ? BOMB_RADIUS_BASE + value * BOMB_RADIUS_PER_MASS : 0,
       x: point ? point.x : W/2, y: point ? point.y : launchY(team), vx: 0, vy: 0
     };
-  }
-
-  function startInventoryDrag(team, point){
-    if (team !== turn || !inventory[team].length) return false;
-    const item = inventory[team].pop();
-    dragOrb = createInventoryOrb(team, item, point);
-    dragStart = point; dragCurrent = point;
-    renderInventory();
-    return true;
   }
 
   function turnLabel(){
@@ -320,7 +394,8 @@
   function newGame(){
     resize();
     orbs = [];
-    inventory = { player: randomInventory(), ai: randomInventory() };
+    inventory = sharedInventoryForBothPlayers();
+    selectedInventory = { player: null, ai: null };
     renderInventory();
     turn = 'player';
     busy = false;
@@ -347,15 +422,6 @@
     gameOver = false;
     overlay.classList.add('hidden');
     menuOverlay.classList.remove('hidden');
-  }
-
-  function orbAt(px, py){
-    for(let i=orbs.length-1;i>=0;i--){
-      const o = orbs[i];
-      const dx = px-o.x, dy = py-o.y;
-      if (Math.hypot(dx,dy) <= o.r+6) return o;
-    }
-    return null;
   }
 
   function pointerPos(e){
@@ -404,9 +470,11 @@
 
   canvas.addEventListener('mousedown', onDown);
   canvas.addEventListener('mousemove', onMove);
+  window.addEventListener('mousemove', onMove);
   window.addEventListener('mouseup', onUp);
   canvas.addEventListener('touchstart', onDown, {passive:false});
   canvas.addEventListener('touchmove', onMove, {passive:false});
+  window.addEventListener('touchmove', onMove, {passive:false});
   window.addEventListener('touchend', onUp);
 
   function isStationary(o){
@@ -530,12 +598,12 @@
     busy = true;
   }
 
-  function hasAvailableOrb(team){
-    return inventory[team].length > 0;
-  }
-
   function otherTeam(team){
     return team === 'player' ? 'ai' : 'player';
+  }
+
+  function clamp(value, min, max){
+    return Math.max(min, Math.min(max, value));
   }
 
   function formatTime(seconds){
@@ -815,6 +883,33 @@
 
     requestAnimationFrame(loop);
   }
+
+  function onInventoryClick(team, event){
+    const slot = event.target.closest('span');
+    if (!slot) return;
+    const idx = Number(slot.dataset.index);
+    if (!Number.isFinite(idx)) return;
+
+    if (team === 'player' && turn !== 'player') return;
+    if (team === 'ai' && turn !== 'ai') return;
+
+    if (team === 'player') {
+      if (selectedInventory.player === idx) {
+        clearSelection('player');
+      } else {
+        selectInventoryOrb('player', idx);
+      }
+    } else {
+      if (selectedInventory.ai === idx) {
+        clearSelection('ai');
+      } else {
+        selectInventoryOrb('ai', idx);
+      }
+    }
+  }
+
+  inventoryBlueEl.addEventListener('click', (e) => onInventoryClick('player', e));
+  inventoryOrangeEl.addEventListener('click', (e) => onInventoryClick('ai', e));
 
   restartBtn.addEventListener('click', ()=>{ newGame(); });
   backToMenuBtn.addEventListener('click', backToMenu);
