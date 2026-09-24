@@ -123,6 +123,23 @@
     text-align:center; padding:30px; z-index:10;
   }
   #menuOverlay.hidden{ display:none; }
+  #difficultyOverlay{
+    position:absolute; inset:0; background:
+      radial-gradient(circle at 25% 20%, rgba(51,193,255,0.12), transparent 55%),
+      radial-gradient(circle at 75% 80%, rgba(255,138,43,0.12), transparent 55%),
+      var(--bg);
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    gap:18px; text-align:center; padding:30px; z-index:12;
+  }
+  #difficultyOverlay.hidden{ display:none; }
+  #difficultyTitle{
+    font-family:'Orbitron', sans-serif; font-weight:800; font-size:30px; margin:0;
+    letter-spacing:1px;
+  }
+  #difficultyPanel{ display:flex; flex-direction:column; gap:16px; align-items:center; }
+  .difficultyOptions{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center; }
+  .difficultyBtn{ min-width:120px; padding:12px 16px; border-radius:16px; border:2px solid rgba(255,255,255,0.12); background:var(--panel); color:#eaf2ff; font-family:'Rubik',sans-serif; cursor:pointer; transition:none; animation:none; transform:none; }
+  .difficultyBtn.active, .difficultyBtn:active, .difficultyBtn:focus, .difficultyBtn:focus-visible{ border-color:rgba(255,255,255,0.12); color:#eaf2ff; background:var(--panel); outline:none; transition:none; animation:none; transform:none; }
   #menuTitle{
     font-family:'Orbitron', sans-serif; font-weight:800; font-size:38px; margin:0;
     letter-spacing:1px;
@@ -179,6 +196,16 @@
         <small>Mismo dispositivo, turnos alternos</small>
       </button>
     </div>
+    <div id="difficultyOverlay" class="hidden">
+      <div id="difficultyPanel">
+        <h1 id="difficultyTitle">Selecciona dificultad</h1>
+        <div class="difficultyOptions">
+          <button class="difficultyBtn" id="difficultyEasy">Fácil</button>
+          <button class="difficultyBtn" id="difficultyIntermediate">Intermedio</button>
+          <button class="difficultyBtn" id="difficultyHard">Difícil</button>
+        </div>
+      </div>
+    </div>
     <div id="helpPanel">
       <h2>MASS BRAWL</h2>
       <p id="helpText">Tú mandas el azul. Arrastra un orbe hacia atrás y suéltalo.</p>
@@ -215,8 +242,19 @@
   const helpPanel = document.getElementById('helpPanel');
   const helpText = document.getElementById('helpText');
   const menuOverlay = document.getElementById('menuOverlay');
+  const difficultyOverlay = document.getElementById('difficultyOverlay');
+  const difficultyTitle = document.getElementById('difficultyTitle');
+  const difficultyEasyBtn = document.getElementById('difficultyEasy');
+  const difficultyIntermediateBtn = document.getElementById('difficultyIntermediate');
+  const difficultyHardBtn = document.getElementById('difficultyHard');
   const modeAiBtn = document.getElementById('modeAiBtn');
   const modePvpBtn = document.getElementById('modePvpBtn');
+
+  const difficultyProfiles = {
+    easy: { targetJitter: 0.24, aimOffset: 0.24, dragScale: 0.82, targetBias: 'easy' },
+    intermediate: { targetJitter: 0.018, aimOffset: 0.045, dragScale: 1.45, targetBias: 'smart' },
+    hard: { targetJitter: 0.010, aimOffset: 0.020, dragScale: 2.10, targetBias: 'smart' }
+  };
 
   let W, H, DPR;
   function resize(){
@@ -250,6 +288,7 @@
   let gameOver = false;
   let started = false;
   let mode = 'ai'; // 'ai' | 'pvp'
+  let difficulty = null; // 'easy' | 'intermediate' | 'hard'
   let aiTimer = null;
   let finalDelayTimer = null;
   let explosions = [];
@@ -406,6 +445,7 @@
     clearTimeout(aiTimer); aiTimer = null;
     clearTimeout(finalDelayTimer); finalDelayTimer = null;
     overlay.classList.add('hidden');
+    difficultyOverlay.classList.add('hidden');
     menuOverlay.classList.add('hidden');
     turnEl.textContent = turnLabel();
     helpText.textContent = buildHelpText();
@@ -421,6 +461,7 @@
     started = false;
     gameOver = false;
     overlay.classList.add('hidden');
+    difficultyOverlay.classList.add('hidden');
     menuOverlay.classList.remove('hidden');
   }
 
@@ -581,18 +622,66 @@
     return {player:s, ai:a};
   }
 
+  function aiProfile(){
+    return difficultyProfiles[difficulty] || difficultyProfiles.intermediate;
+  }
+
+  function aiPickTarget(item){
+    const profile = aiProfile();
+    const playerOrbs = orbs.filter(o => o.team === 'player');
+
+    if (!playerOrbs.length) {
+      return {
+        x: W/2 + (Math.random()-0.5)*W*0.60,
+        y: H*0.72 + (Math.random()-0.5)*bandHeight()*0.80
+      };
+    }
+
+    const ordered = playerOrbs
+      .slice()
+      .sort((a, b) => b.value - a.value || Math.abs(a.x - W/2) - Math.abs(b.x - W/2));
+
+    const chosen = ordered[0];
+    const easyPick = ordered[Math.min(ordered.length - 1, Math.floor(Math.random() * Math.min(ordered.length, 2)))];
+    const targetOrb = profile.targetBias === 'easy' ? easyPick : chosen;
+
+    if (profile.targetBias === 'easy') {
+      const targetRadius = Math.max(16, W * profile.aimOffset);
+      const xJitter = (Math.random() * targetRadius * 2 - targetRadius);
+      const yJitter = (Math.random() * bandHeight() * 0.50 - bandHeight() * 0.25);
+      return {
+        x: clamp(targetOrb.x + xJitter, 0, W),
+        y: clamp(targetOrb.y + yJitter, bandHeight(), H-bandHeight())
+      };
+    }
+
+    const targetRadius = Math.max(10, W * profile.aimOffset);
+    const direction = Math.random() > 0.5 ? 1 : -1;
+    const xJitter = (Math.random() * targetRadius * 2 - targetRadius) * direction;
+    const yJitter = (Math.random() - 0.5) * bandHeight() * profile.targetJitter * 4;
+
+    return {
+      x: clamp(targetOrb.x + xJitter, 0, W),
+      y: clamp(targetOrb.y + yJitter, bandHeight(), H-bandHeight())
+    };
+  }
+
   function aiPlay(){
     aiTimer = null;
     if (!inventory.ai.length) { endTurn(); return; }
+
     const item = inventory.ai.pop();
     const shooter = createInventoryOrb('ai', item);
-    const target = { x: W/2 + (Math.random()-0.5)*W*0.5, y: H*0.7 };
+    const profile = aiProfile();
+    const target = aiPickTarget(item);
     const dirx = shooter.x-target.x, diry = shooter.y-target.y;
     const len = Math.hypot(dirx,diry) || 1;
-    const dist = 70 + Math.random()*MAX_DRAG*0.6;
+    const dist = 60 + profile.dragScale * (MAX_DRAG * 0.50 + Math.random() * MAX_DRAG * 0.22);
     const massFactor = 1 / Math.sqrt(shooter.value);
+
     shooter.vx = (dirx/len) * dist * POWER * 6 * massFactor;
     shooter.vy = (diry/len) * dist * POWER * 6 * massFactor;
+
     orbs.push(shooter);
     renderInventory();
     busy = true;
@@ -911,10 +1000,36 @@
   inventoryBlueEl.addEventListener('click', (e) => onInventoryClick('player', e));
   inventoryOrangeEl.addEventListener('click', (e) => onInventoryClick('ai', e));
 
+  function selectDifficultyButton(selected){
+    const key = selected && difficultyProfiles[selected] ? selected : null;
+    difficultyEasyBtn.classList.toggle('active', key === 'easy');
+    difficultyIntermediateBtn.classList.toggle('active', key === 'intermediate');
+    difficultyHardBtn.classList.toggle('active', key === 'hard');
+  }
+
+  function startAiGame(selectedDifficulty){
+    const choice = difficultyProfiles[selectedDifficulty] ? selectedDifficulty : 'intermediate';
+    difficulty = choice;
+    mode = 'ai';
+    selectDifficultyButton(difficulty);
+    difficultyOverlay.classList.add('hidden');
+    newGame();
+  }
+
+  function showDifficultyOverlay(){
+    mode = 'ai';
+    menuOverlay.classList.add('hidden');
+    difficultyOverlay.classList.remove('hidden');
+    selectDifficultyButton(difficulty);
+  }
+
   restartBtn.addEventListener('click', ()=>{ newGame(); });
   backToMenuBtn.addEventListener('click', backToMenu);
-  modeAiBtn.addEventListener('click', ()=>{ mode='ai'; newGame(); });
-  modePvpBtn.addEventListener('click', ()=>{ mode='pvp'; newGame(); });
+  modeAiBtn.addEventListener('click', ()=>{ showDifficultyOverlay(); });
+  modePvpBtn.addEventListener('click', ()=>{ mode='pvp'; menuOverlay.classList.add('hidden'); newGame(); });
+  difficultyEasyBtn.addEventListener('click', ()=>{ startAiGame('easy'); });
+  difficultyIntermediateBtn.addEventListener('click', ()=>{ startAiGame('intermediate'); });
+  difficultyHardBtn.addEventListener('click', ()=>{ startAiGame('hard'); });
   howto.addEventListener('click', ()=>{
     helpText.textContent = buildHelpText();
     const isVisible = helpPanel.classList.toggle('visible');
@@ -925,6 +1040,8 @@
     helpPanel.classList.remove('visible');
     howto.style.display = 'flex';
   });
+
+  selectDifficultyButton(difficulty);
 
   // Muestra el tablero vacío detrás del menú antes de elegir modo
   resize();
