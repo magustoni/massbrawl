@@ -504,6 +504,7 @@
   const INVENTORY_SIZE = 5;
   const TURN_SECONDS = 60;
   const BOMB_PROBABILITY = 0.10;
+  const SPIKE_PROBABILITY = 0.12;
   const BOMB_RADIUS_BASE = 34;
   const BOMB_RADIUS_PER_MASS = 6;
   const ORB_BASE_RADIUS = 10;
@@ -535,12 +536,17 @@
     return null;
   }
 
+  function orbRadius(value){
+    return ORB_BASE_RADIUS + value * ORB_RADIUS_PER_MASS;
+  }
+
   let inventory = { player: [], ai: [] };
   let nextOrbId = 0;
   let selectedInventory = { player: null, ai: null };
 
   function inventoryText(item){
-    return item.bomb ? `✹${item.value}` : String(item.value);
+    const markers = `${item.bomb ? '✹' : ''}${item.spiked ? '✦' : ''}`;
+    return `${markers}${item.value}`;
   }
 
   function renderInventory(){
@@ -558,7 +564,12 @@
   function randomInventory(){
     return Array.from({length: INVENTORY_SIZE}, () => {
       const value = 1 + Math.floor(Math.random() * MAX_MASS);
-      return { value, bomb: Math.random() < BOMB_PROBABILITY };
+      const bomb = Math.random() < BOMB_PROBABILITY;
+      return {
+        value,
+        bomb,
+        spiked: !bomb && Math.random() < SPIKE_PROBABILITY
+      };
     });
   }
 
@@ -632,9 +643,10 @@
   function createInventoryOrb(team, item, point){
     const value = item.value ?? item;
     const bomb = item.bomb ?? false;
-    const r = ORB_BASE_RADIUS + value * ORB_RADIUS_PER_MASS;
+    const spiked = item.spiked ?? false;
+    const r = orbRadius(value);
     return {
-      id: `orb${nextOrbId++}`, team, value, bomb, r,
+      id: `orb${nextOrbId++}`, team, value, bomb, spiked, r,
       bombRadius: bomb ? BOMB_RADIUS_BASE + value * BOMB_RADIUS_PER_MASS : 0,
       x: point ? point.x : W/2, y: point ? point.y : launchY(team), vx: 0, vy: 0
     };
@@ -740,7 +752,7 @@
         : (turn === 'player' ? t('playing') : t('aiPlaying'));
       orbs.push(dragOrb);
     } else if (!orbs.includes(dragOrb)) {
-      inventory[dragOrb.team].push({ value: dragOrb.value, bomb: dragOrb.bomb });
+      inventory[dragOrb.team].push({ value: dragOrb.value, bomb: dragOrb.bomb, spiked: dragOrb.spiked });
       renderInventory();
     }
     dragOrb = null; dragStart = null; dragCurrent = null;
@@ -764,7 +776,7 @@
 
   function detonateBombs(){
     const stationaryBombs = orbs.filter(o => o.bomb && isStationary(o));
-    const contactBombs = orbs.filter(o => o.bomb && orbs.some(x => x !== o && x.team !== o.team && Math.hypot(x.x-o.x, x.y-o.y) <= o.bombRadius));
+      const contactBombs = orbs.filter(o => o.bomb && (o.contactDetonation || orbs.some(x => x !== o && x.team !== o.team && Math.hypot(x.x-o.x, x.y-o.y) <= o.r + x.r)));
     const bombSources = new Map();
 
     for (const bomb of stationaryBombs) bombSources.set(bomb.id, bomb);
@@ -775,10 +787,10 @@
     const blastMarks = [];
 
     for (const bomb of bombSources.values()) {
-      const victims = orbs.filter(o => o !== bomb && o.team !== bomb.team && Math.hypot(o.x-bomb.x, o.y-bomb.y) <= bomb.bombRadius);
+      const victims = orbs.filter(o => o !== bomb && o.team !== bomb.team && Math.hypot(o.x-bomb.x, o.y-bomb.y) <= bomb.bombRadius + o.r);
 
       for (const victim of victims) {
-        victim.value -= bomb.value;
+        victim.value = Math.max(0, victim.value - bomb.value);
 
         if (victim.value <= 0) {
           victim.dead = true;
@@ -786,6 +798,7 @@
       }
 
       bomb.dead = true;
+      bomb.contactDetonation = false;
       blastMarks.push({ x: bomb.x, y: bomb.y, radius: bomb.bombRadius, age: 0, maxAge: 0.45 });
     }
 
@@ -805,17 +818,67 @@
     }
   }
 
-  function physicsStep(){
-    for (const o of orbs){
-      o.x += o.vx; o.y += o.vy;
-      o.vx *= FRICTION; o.vy *= FRICTION;
-      if (Math.hypot(o.vx,o.vy) < MIN_SPEED) { o.vx = 0; o.vy = 0; }
+  function attachOrbs(first, second){
+    const firstGroup = first.linkGroup;
+    const secondGroup = second.linkGroup;
+    if (firstGroup && firstGroup === secondGroup) return;
 
-      if (o.x - o.r < 0) { o.x = o.r; o.vx = Math.abs(o.vx)*WALL_BOUNCE; }
-      if (o.x + o.r > W) { o.x = W-o.r; o.vx = -Math.abs(o.vx)*WALL_BOUNCE; }
-      if (o.y - o.r < 0) { o.y = o.r; o.vy = Math.abs(o.vy)*WALL_BOUNCE; }
-      if (o.y + o.r > H) { o.y = H-o.r; o.vy = -Math.abs(o.vy)*WALL_BOUNCE; }
+    const members = [...new Set([
+      ...(firstGroup ? firstGroup.members : [first]),
+      ...(secondGroup ? secondGroup.members : [second])
+    ])];
+    const anchor = firstGroup ? firstGroup.anchor : first;
+    const totalMass = members.reduce((sum, orb) => sum + orb.value, 0);
+    const group = {
+      members,
+      anchor,
+      vx: members.reduce((sum, orb) => sum + orb.vx * orb.value, 0) / totalMass,
+      vy: members.reduce((sum, orb) => sum + orb.vy * orb.value, 0) / totalMass,
+      offsets: new Map()
+    };
+
+    for (const orb of members) {
+      orb.linkGroup = group;
+      group.offsets.set(orb, { x: orb.x - anchor.x, y: orb.y - anchor.y });
     }
+    syncAttachedGroups();
+  }
+
+  function syncAttachedGroups(){
+    const groups = new Set(orbs.map(orb => orb.linkGroup).filter(Boolean));
+    for (const group of groups) {
+      group.members = group.members.filter(orb => orbs.includes(orb));
+      if (group.members.length < 2) {
+        for (const orb of group.members) orb.linkGroup = null;
+        continue;
+      }
+      if (!group.members.includes(group.anchor)) group.anchor = group.members[0];
+      for (const orb of group.members) {
+        const offset = group.offsets.get(orb) || { x: 0, y: 0 };
+        orb.x = group.anchor.x + offset.x;
+        orb.y = group.anchor.y + offset.y;
+        orb.vx = group.vx;
+        orb.vy = group.vy;
+      }
+    }
+  }
+
+  function physicsStep(){
+    syncAttachedGroups();
+    for (const o of orbs){
+      if (o.linkGroup && o.linkGroup.anchor !== o) continue;
+
+      const velocity = o.linkGroup || o;
+      o.x += velocity.vx; o.y += velocity.vy;
+      velocity.vx *= FRICTION; velocity.vy *= FRICTION;
+      if (Math.hypot(velocity.vx,velocity.vy) < MIN_SPEED) { velocity.vx = 0; velocity.vy = 0; }
+
+      if (o.x - o.r < 0) { o.x = o.r; velocity.vx = Math.abs(velocity.vx)*WALL_BOUNCE; }
+      if (o.x + o.r > W) { o.x = W-o.r; velocity.vx = -Math.abs(velocity.vx)*WALL_BOUNCE; }
+      if (o.y - o.r < 0) { o.y = o.r; velocity.vy = Math.abs(velocity.vy)*WALL_BOUNCE; }
+      if (o.y + o.r > H) { o.y = H-o.r; velocity.vy = -Math.abs(velocity.vy)*WALL_BOUNCE; }
+    }
+    syncAttachedGroups();
     // collisions
     for (let i=0;i<orbs.length;i++){
       for (let j=i+1;j<orbs.length;j++){
@@ -824,6 +887,20 @@
         const dist = Math.hypot(dx,dy) || 0.0001;
         const minDist = a.r+b.r;
         if (dist < minDist){
+          if (a.team !== b.team) {
+            if (a.bomb) a.contactDetonation = true;
+            if (b.bomb) b.contactDetonation = true;
+          }
+
+          if (a.linkGroup && a.linkGroup === b.linkGroup) {
+            continue;
+          }
+
+          if (a.spiked || b.spiked) {
+            attachOrbs(a, b);
+            continue;
+          }
+
           const nx = dx/dist, ny = dy/dist;
           const overlap = (minDist-dist)/2;
           a.x -= nx*overlap; a.y -= ny*overlap;
@@ -836,6 +913,14 @@
           const v2nAfter = (v2n*(m2-m1) + 2*m1*v1n)/(m1+m2);
           a.vx += (v1nAfter-v1n)*nx; a.vy += (v1nAfter-v1n)*ny;
           b.vx += (v2nAfter-v2n)*nx; b.vy += (v2nAfter-v2n)*ny;
+          if (a.linkGroup) {
+            a.linkGroup.vx = a.vx;
+            a.linkGroup.vy = a.vy;
+          }
+          if (b.linkGroup) {
+            b.linkGroup.vx = b.vx;
+            b.linkGroup.vy = b.vy;
+          }
         }
       }
     }
@@ -843,7 +928,7 @@
       const o = orbs[i];
       const collector = pickupTeam(o.y);
       if (collector && isStationary(o)) {
-        inventory[collector].push({ value: o.value, bomb: o.bomb });
+        inventory[collector].push({ value: o.value, bomb: o.bomb, spiked: o.spiked });
         orbs.splice(i, 1);
         renderInventory();
       }
@@ -1090,6 +1175,23 @@
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = color.c; ctx.stroke();
+
+    if (o.spiked) {
+      ctx.strokeStyle = color.c;
+      ctx.fillStyle = color.c;
+      ctx.lineWidth = 1.5;
+      for (let index = 0; index < 8; index++) {
+        const angle = (Math.PI * 2 * index) / 8;
+        const innerRadius = o.r - 1;
+        const outerRadius = o.r + 8;
+        ctx.beginPath();
+        ctx.moveTo(o.x + Math.cos(angle - 0.16) * innerRadius, o.y + Math.sin(angle - 0.16) * innerRadius);
+        ctx.lineTo(o.x + Math.cos(angle) * outerRadius, o.y + Math.sin(angle) * outerRadius);
+        ctx.lineTo(o.x + Math.cos(angle + 0.16) * innerRadius, o.y + Math.sin(angle + 0.16) * innerRadius);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
 
     if (o.bomb) {
       ctx.beginPath(); ctx.arc(o.x,o.y,o.r+4,0,Math.PI*2); ctx.strokeStyle = 'rgba(255,255,180,0.95)'; ctx.lineWidth = 2; ctx.stroke();
