@@ -239,7 +239,7 @@
         </div>
       </div>
     </div>
-    <div id="turnIndicator">Tu turno — arrastra un orbe azul</div>
+    <div id="turnIndicator">Your turn: drag a blue orb back, then release</div>
     <canvas id="game"></canvas>
     <div id="menuOverlay">
       <h1 id="menuTitle">MASS <span>BRAWL</span></h1>
@@ -363,71 +363,71 @@
 
   const translations = {
     en: {
-      menuSub: 'Choose who you want to play against', aiMode: 'Play against AI',
-      aiModeDesc: 'You (blue) vs. the machine (orange)', pvpMode: 'Play against another person',
-      pvpModeDesc: 'Same device, alternate turns', settings: 'Settings', language: 'Language',
+      menuSub: 'Choose your opponent', aiMode: 'Play against AI',
+      aiModeDesc: 'Test your skills against the machine', pvpMode: 'Local multiplayer',
+      pvpModeDesc: 'Take turns on the same device', settings: 'Settings', language: 'Language',
       sound: 'Sound', vibration: 'Vibration', reducedMotion: 'Reduce animations', cancel: 'Cancel',
       apply: 'Apply', difficultyTitle: 'Select difficulty', easy: 'Easy', intermediate: 'Intermediate',
       hard: 'Hard', exitTitle: 'Exit the game?', exitText: 'Do you want to return to the main menu?',
       exit: 'Exit', playAgain: 'Play again', backToMenu: 'Back to menu', howToPlay: 'How to play',
-      helpAi: 'You control blue. Drag an orb backwards and release.', helpPvp: 'Player 1 (blue): drag an orb backwards and release.',
-      helpAiTurn: 'The AI is playing orange. Watch the field.', helpPvpTurn: 'Player 2 (orange): launch from your side of the board.',
-      turnAi: 'Your turn: drag a blue orb backwards and release', turnPvp1: 'Player 1 (blue): drag an orb and release',
-      turnPvp2: 'Player 2 (orange): drag an orb and release', aiTurn: 'Opponent turn...',
+      helpAi: 'You control the blue team. Drag an orb back, then release to launch.', helpPvp: 'Player 1 (blue): drag an orb back, then release to launch.',
+      helpAiTurn: 'The AI controls orange. Watch the board.', helpPvpTurn: 'Player 2 (orange): launch from the orange side.',
+      turnAi: 'Your turn: drag a blue orb back, then release', turnPvp1: 'Player 1 (blue): drag an orb back, then release',
+      turnPvp2: 'Player 2 (orange): drag an orb back, then release', aiTurn: "Opponent's turn...",
       selectedBlue: 'Blue orb selected: ', selectedOrange: 'Orange orb selected: ',
-      playing: 'Orb in play...', pvpPlaying1: 'Player 1 orb in play...', pvpPlaying2: 'Player 2 orb in play...',
-      aiPlaying: 'The AI is playing...', victory: 'You won!', defeat: 'You lost', draw: 'Draw',
+      playing: 'Orb launched...', pvpPlaying1: 'Player 1 orb launched...', pvpPlaying2: 'Player 2 orb launched...',
+      aiPlaying: 'AI is playing...', victory: 'Victory!', defeat: 'Defeat', draw: 'Draw',
       pvpWinner1: 'Player 1 (blue) wins', pvpWinner2: 'Player 2 (orange) wins'
     },
     de: {
       menuSub: 'Wähle deinen Gegner', aiMode: 'Gegen die KI spielen',
-      aiModeDesc: 'Du (blau) gegen die Maschine (orange)', pvpMode: 'Gegen eine andere Person spielen',
-      pvpModeDesc: 'Gleiches Gerät, abwechselnde Züge', settings: 'Einstellungen', language: 'Sprache',
+      aiModeDesc: 'Beweise dein Können gegen die Maschine', pvpMode: 'Lokaler Mehrspielermodus',
+      pvpModeDesc: 'Spielt abwechselnd am selben Gerät', settings: 'Einstellungen', language: 'Sprache',
       sound: 'Ton', vibration: 'Vibration', reducedMotion: 'Animationen reduzieren', cancel: 'Abbrechen',
       apply: 'Anwenden', difficultyTitle: 'Schwierigkeit wählen', easy: 'Leicht', intermediate: 'Mittel',
       hard: 'Schwer', exitTitle: 'Spiel verlassen?', exitText: 'Möchtest du zum Hauptmenü zurückkehren?',
       exit: 'Verlassen', playAgain: 'Noch einmal spielen', backToMenu: 'Zum Menü', howToPlay: 'Spielanleitung',
-      helpAi: 'Du steuerst Blau. Ziehe eine Kugel zurück und lasse sie los.', helpPvp: 'Spieler 1 (blau): Ziehe eine Kugel zurück und lasse sie los.',
-      helpAiTurn: 'Die KI spielt Orange. Beobachte das Spielfeld.', helpPvpTurn: 'Spieler 2 (orange): Starte von deiner Seite des Spielfelds.',
-      turnAi: 'Du bist dran: Ziehe eine blaue Kugel zurück und lasse sie los', turnPvp1: 'Spieler 1 (blau): Ziehe eine Kugel und lasse sie los',
-      turnPvp2: 'Spieler 2 (orange): Ziehe eine Kugel und lasse sie los', aiTurn: 'Der Gegner ist am Zug...',
+      helpAi: 'Du steuerst das blaue Team. Ziehe eine Kugel zurück und lasse sie zum Starten los.', helpPvp: 'Spieler 1 (blau): Ziehe eine Kugel zurück und lasse sie zum Starten los.',
+      helpAiTurn: 'Die KI steuert Orange. Beobachte das Spielfeld.', helpPvpTurn: 'Spieler 2 (orange): Starte von der orangenen Seite.',
+      turnAi: 'Du bist dran: Ziehe eine blaue Kugel zurück und lasse sie los', turnPvp1: 'Spieler 1 (blau): Ziehe eine Kugel zurück und lasse sie los',
+      turnPvp2: 'Spieler 2 (orange): Ziehe eine Kugel zurück und lasse sie los', aiTurn: 'Der Gegner ist am Zug...',
       selectedBlue: 'Blaue Kugel gewählt: ', selectedOrange: 'Orange Kugel gewählt: ',
-      playing: 'Kugel im Spiel...', pvpPlaying1: 'Kugel von Spieler 1 im Spiel...', pvpPlaying2: 'Kugel von Spieler 2 im Spiel...',
-      aiPlaying: 'Die KI spielt...', victory: 'Du hast gewonnen!', defeat: 'Du hast verloren', draw: 'Unentschieden',
+      playing: 'Kugel gestartet...', pvpPlaying1: 'Kugel von Spieler 1 gestartet...', pvpPlaying2: 'Kugel von Spieler 2 gestartet...',
+      aiPlaying: 'Die KI spielt...', victory: 'Sieg!', defeat: 'Niederlage', draw: 'Unentschieden',
       pvpWinner1: 'Spieler 1 (blau) gewinnt', pvpWinner2: 'Spieler 2 (orange) gewinnt'
     },
     fr: {
       menuSub: 'Choisissez votre adversaire', aiMode: "Jouer contre l'IA",
-      aiModeDesc: 'Vous (bleu) contre la machine (orange)', pvpMode: 'Jouer contre une autre personne',
-      pvpModeDesc: 'Même appareil, tours alternés', settings: 'Paramètres', language: 'Langue',
+      aiModeDesc: 'Mettez vos talents à l’épreuve', pvpMode: 'Multijoueur local',
+      pvpModeDesc: 'Jouez à tour de rôle sur le même appareil', settings: 'Paramètres', language: 'Langue',
       sound: 'Son', vibration: 'Vibration', reducedMotion: 'Réduire les animations', cancel: 'Annuler',
       apply: 'Appliquer', difficultyTitle: 'Choisir la difficulté', easy: 'Facile', intermediate: 'Intermédiaire',
       hard: 'Difficile', exitTitle: 'Quitter la partie ?', exitText: 'Voulez-vous retourner au menu principal ?',
       exit: 'Quitter', playAgain: 'Rejouer', backToMenu: 'Retour au menu', howToPlay: 'Comment jouer',
-      helpAi: "Vous contrôlez le bleu. Tirez une bille vers l'arrière puis relâchez.", helpPvp: 'Joueur 1 (bleu) : tirez une bille vers l’arrière puis relâchez.',
-      helpAiTurn: "L'IA joue l'orange. Observez le terrain.", helpPvpTurn: 'Joueur 2 (orange) : lancez depuis votre côté du terrain.',
-      turnAi: 'À vous : tirez une bille bleue vers l’arrière puis relâchez', turnPvp1: 'Joueur 1 (bleu) : tirez une bille puis relâchez',
-      turnPvp2: 'Joueur 2 (orange) : tirez une bille puis relâchez', aiTurn: 'Tour de l’adversaire...',
+      helpAi: "Vous contrôlez l’équipe bleue. Tirez une bille vers l’arrière, puis relâchez pour lancer.", helpPvp: 'Joueur 1 (bleu) : tirez une bille vers l’arrière, puis relâchez pour lancer.',
+      helpAiTurn: "L’IA contrôle l’orange. Observez le terrain.", helpPvpTurn: 'Joueur 2 (orange) : lancez depuis le côté orange.',
+      turnAi: 'À vous : tirez une bille bleue vers l’arrière, puis relâchez', turnPvp1: 'Joueur 1 (bleu) : tirez une bille vers l’arrière, puis relâchez',
+      turnPvp2: 'Joueur 2 (orange) : tirez une bille vers l’arrière, puis relâchez', aiTurn: 'Au tour de l’adversaire...',
       selectedBlue: 'Bille bleue sélectionnée : ', selectedOrange: 'Bille orange sélectionnée : ',
-      playing: 'Bille en jeu...', pvpPlaying1: 'Bille du joueur 1 en jeu...', pvpPlaying2: 'Bille du joueur 2 en jeu...',
-      aiPlaying: "L'IA joue...", victory: 'Vous avez gagné !', defeat: 'Vous avez perdu', draw: 'Match nul',
+      playing: 'Bille lancée...', pvpPlaying1: 'Bille du joueur 1 lancée...', pvpPlaying2: 'Bille du joueur 2 lancée...',
+      aiPlaying: 'L’IA joue...', victory: 'Victoire !', defeat: 'Défaite', draw: 'Égalité',
       pvpWinner1: 'Le joueur 1 (bleu) gagne', pvpWinner2: 'Le joueur 2 (orange) gagne'
     },
     es: {
-      menuSub: 'Elige contra quién quieres jugar', aiMode: 'Jugar contra la IA',
-      aiModeDesc: 'Tú (azul) contra la máquina (naranja)', pvpMode: 'Jugar contra otra persona',
-      pvpModeDesc: 'Mismo dispositivo, turnos alternos', settings: 'Configuración', language: 'Idioma',
+      menuSub: 'Elige a tu rival', aiMode: 'Jugar contra la IA',
+      aiModeDesc: 'Pon a prueba tus habilidades contra la máquina', pvpMode: 'Multijugador local',
+      pvpModeDesc: 'Turnos alternos en el mismo dispositivo', settings: 'Configuración', language: 'Idioma',
       sound: 'Sonido', vibration: 'Vibración', reducedMotion: 'Reducir animaciones', cancel: 'Cancelar',
       apply: 'Aplicar', difficultyTitle: 'Selecciona dificultad', easy: 'Fácil', intermediate: 'Intermedio',
       hard: 'Difícil', exitTitle: '¿Salir de la partida?', exitText: '¿Quieres volver al menú principal?',
       exit: 'Salir', playAgain: 'Jugar de nuevo', backToMenu: 'Volver al menú', howToPlay: 'Cómo jugar',
-      helpAi: 'Tú mandas el azul. Arrastra un orbe hacia atrás y suéltalo.', helpPvp: 'Jugador 1 (azul): arrastra un orbe hacia atrás y suéltalo.',
-      helpAiTurn: 'La IA juega el naranja. Observa el campo.', helpPvpTurn: 'Jugador 2 (naranja): lanza desde tu lado del tablero.',
-      turnAi: 'Tu turno: arrastra un orbe azul hacia atrás y suelta', turnPvp1: 'Jugador 1 (azul): arrastra un orbe y suelta',
-      turnPvp2: 'Jugador 2 (naranja): arrastra un orbe y suelta', aiTurn: 'Turno rival...',
+      helpAi: 'Controlas el equipo azul. Arrastra un orbe hacia atrás y suéltalo para lanzarlo.', helpPvp: 'Jugador 1 (azul): arrastra un orbe hacia atrás y suéltalo para lanzarlo.',
+      helpAiTurn: 'La IA controla el naranja. Observa el tablero.', helpPvpTurn: 'Jugador 2 (naranja): lanza desde el lado naranja.',
+      turnAi: 'Tu turno: arrastra un orbe azul hacia atrás y suéltalo', turnPvp1: 'Jugador 1 (azul): arrastra un orbe hacia atrás y suéltalo',
+      turnPvp2: 'Jugador 2 (naranja): arrastra un orbe hacia atrás y suéltalo', aiTurn: 'Turno del rival...',
       selectedBlue: 'Orbe azul seleccionado: ', selectedOrange: 'Orbe naranja seleccionado: ',
-      playing: 'Orbe en juego...', pvpPlaying1: 'Orbe del Jugador 1 en juego...', pvpPlaying2: 'Orbe del Jugador 2 en juego...',
-      aiPlaying: 'La IA está jugando...', victory: '¡Ganaste!', defeat: 'Perdiste', draw: 'Empate',
+      playing: 'Orbe lanzado...', pvpPlaying1: 'Orbe del Jugador 1 lanzado...', pvpPlaying2: 'Orbe del Jugador 2 lanzado...',
+      aiPlaying: 'La IA está jugando...', victory: '¡Victoria!', defeat: 'Derrota', draw: 'Empate',
       pvpWinner1: 'Gana el Jugador 1 (azul)', pvpWinner2: 'Gana el Jugador 2 (naranja)'
     }
   };
@@ -693,6 +693,8 @@
     clearTimeout(finalDelayTimer); finalDelayTimer = null;
     started = false;
     gameOver = false;
+    helpPanel.classList.remove('visible');
+    howto.style.display = 'flex';
     exitConfirmOverlay.classList.add('hidden');
     settingsOverlay.classList.add('hidden');
     overlay.classList.add('hidden');
@@ -707,7 +709,7 @@
   }
 
   function onDown(e){
-    if (busy || gameOver || !started || !canPlay(turn)) return;
+    if (busy || gameOver || !started || !canPlay(turn) || (mode === 'ai' && turn === 'ai')) return;
     const p = pointerPos(e);
 
     // Solo se lanzan orbes nuevos desde la zona de lanzamiento del equipo activo.
@@ -903,6 +905,7 @@
 
   function aiPlay(){
     aiTimer = null;
+    if (mode !== 'ai' || turn !== 'ai' || gameOver) return;
     if (!inventory.ai.length) { endTurn(); return; }
 
     const item = inventory.ai.pop();
@@ -1174,6 +1177,9 @@
               turnEl.textContent = turnLabel();
               helpText.textContent = buildHelpText();
               updateTurnUI();
+              if (mode === 'ai') {
+                aiTimer = setTimeout(()=>{ if(!gameOver && turn === 'ai') aiPlay(); }, 650);
+              }
             }
           }
         } else {
@@ -1214,6 +1220,7 @@
     const idx = Number(slot.dataset.index);
     if (!Number.isFinite(idx)) return;
 
+    if (mode === 'ai' && team === 'ai') return;
     if (team === 'player' && turn !== 'player') return;
     if (team === 'ai' && turn !== 'ai') return;
 
