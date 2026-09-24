@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Mass Brawl — Prototipo</title>
+<title>Mass Brawl</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rubik:wght@400;500;700&display=swap');
 
@@ -138,6 +138,35 @@
     gap:18px; text-align:center; padding:30px; z-index:12;
   }
   #difficultyOverlay.hidden{ display:none; }
+  #settingsOverlay{
+    position:absolute; inset:0; z-index:13;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 25% 20%, rgba(51,193,255,0.12), transparent 55%),
+      radial-gradient(circle at 75% 80%, rgba(255,138,43,0.12), transparent 55%),
+      var(--bg);
+    padding:24px;
+  }
+  #settingsOverlay.hidden{ display:none; }
+  #settingsPanel{
+    width:min(390px, 100%); padding:24px 20px; border:1px solid rgba(255,255,255,0.16);
+    border-radius:18px; background:var(--panel); box-shadow:0 10px 30px rgba(0,0,0,0.65);
+  }
+  #settingsTitle{ margin:0 0 20px; font-family:'Orbitron', sans-serif; font-size:24px; text-align:center; }
+  .settingRow{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    min-height:48px; border-top:1px solid rgba(255,255,255,0.08); color:#eaf2ff;
+  }
+  .settingRow label{ font-size:14px; }
+  .settingRow select{
+    min-width:138px; padding:8px 10px; border:1px solid rgba(255,255,255,0.18);
+    border-radius:8px; background:#111d31; color:#eaf2ff; font:inherit;
+  }
+  .settingRow input{ width:18px; height:18px; accent-color:var(--blue); }
+  #settingsActions{ display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+  #settingsActions button{ min-width:100px; padding:10px 16px; }
+  #cancelSettingsBtn{ background:transparent; color:#cfe3ff; border:1px solid rgba(255,255,255,0.18); }
+  .reduced-motion *, .reduced-motion *::before, .reduced-motion *::after{ animation:none !important; transition:none !important; }
   #exitConfirmOverlay{
     position:absolute; inset:0; z-index:14;
     display:flex; align-items:center; justify-content:center;
@@ -178,6 +207,12 @@
   .modeBtn.blueMode{ border-color:var(--blue); }
   .modeBtn.orangeMode{ border-color:var(--orange); }
   .modeBtn:active{ transform:scale(0.97); }
+  #settingsBtn{
+    position:absolute; top:14px; right:14px; width:36px; height:36px;
+    padding:0; border-radius:50%; background:var(--panel); color:#cfe3ff;
+    border:1px solid rgba(255,255,255,0.16); font-size:20px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
   #backToMenuBtn{
     margin-top:4px; background:transparent; color:#9fb3d1; text-decoration:underline;
     font-weight:500; padding:6px;
@@ -186,7 +221,7 @@
 </head>
 <body>
 <div id="app">
-  <div id="howto" title="Cómo jugar">?</div>
+  <div id="howto" title="How to play">?</div>
   <div id="canvasWrap">
     <div id="gameHud">
       <div id="leftBoardSide" class="boardSide left">
@@ -208,46 +243,77 @@
     <canvas id="game"></canvas>
     <div id="menuOverlay">
       <h1 id="menuTitle">MASS <span>BRAWL</span></h1>
-      <p id="menuSub">Elige contra quién quieres jugar</p>
+      <p id="menuSub" data-i18n="menuSub">Choose who you want to play against</p>
       <button class="modeBtn blueMode" id="modeAiBtn">
-        <strong>Jugar contra la IA</strong>
-        <small>Tú (azul) vs. la máquina (naranja)</small>
+        <strong data-i18n="aiMode">Play against AI</strong>
+        <small data-i18n="aiModeDesc">You (blue) vs. the machine (orange)</small>
       </button>
       <button class="modeBtn orangeMode" id="modePvpBtn">
-        <strong>Jugar contra otra persona</strong>
-        <small>Mismo dispositivo, turnos alternos</small>
+        <strong data-i18n="pvpMode">Play against another person</strong>
+        <small data-i18n="pvpModeDesc">Same device, alternate turns</small>
       </button>
+      <button id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
     </div>
     <div id="difficultyOverlay" class="hidden">
       <div id="difficultyPanel">
-        <h1 id="difficultyTitle">Selecciona dificultad</h1>
+        <h1 id="difficultyTitle" data-i18n="difficultyTitle">Select difficulty</h1>
         <div class="difficultyOptions">
-          <button class="difficultyBtn" id="difficultyEasy">Fácil</button>
-          <button class="difficultyBtn" id="difficultyIntermediate">Intermedio</button>
-          <button class="difficultyBtn" id="difficultyHard">Difícil</button>
+          <button class="difficultyBtn" id="difficultyEasy" data-i18n="easy">Easy</button>
+          <button class="difficultyBtn" id="difficultyIntermediate" data-i18n="intermediate">Intermediate</button>
+          <button class="difficultyBtn" id="difficultyHard" data-i18n="hard">Hard</button>
+        </div>
+      </div>
+    </div>
+    <div id="settingsOverlay" class="hidden">
+      <div id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <h1 id="settingsTitle" data-i18n="settings">Settings</h1>
+        <div class="settingRow">
+          <label for="languageSelect" data-i18n="language">Language</label>
+          <select id="languageSelect">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+          </select>
+        </div>
+        <div class="settingRow">
+          <label for="soundToggle" data-i18n="sound">Sound</label>
+          <input id="soundToggle" type="checkbox">
+        </div>
+        <div class="settingRow">
+          <label for="vibrationToggle" data-i18n="vibration">Vibration</label>
+          <input id="vibrationToggle" type="checkbox">
+        </div>
+        <div class="settingRow">
+          <label for="motionToggle" data-i18n="reducedMotion">Reduce animations</label>
+          <input id="motionToggle" type="checkbox">
+        </div>
+        <div id="settingsActions">
+          <button id="cancelSettingsBtn" data-i18n="cancel">Cancel</button>
+          <button id="applySettingsBtn" data-i18n="apply">Apply</button>
         </div>
       </div>
     </div>
     <div id="helpPanel">
       <h2>MASS BRAWL</h2>
-      <p id="helpText">Tú mandas el azul. Arrastra un orbe hacia atrás y suéltalo.</p>
+      <p id="helpText">You control blue. Drag an orb backwards and release.</p>
     </div>
-    <button id="exitGame" title="Salir al menú principal" aria-label="Salir al menú principal">×</button>
+    <button id="exitGame" title="Exit to main menu" aria-label="Exit to main menu">×</button>
     <div id="exitConfirmOverlay" class="hidden">
       <div id="exitConfirmPanel" role="dialog" aria-modal="true" aria-labelledby="exitConfirmTitle">
-        <h2 id="exitConfirmTitle">¿Salir de la partida?</h2>
-        <p id="exitConfirmText">¿Quieres volver al menú principal?</p>
+        <h2 id="exitConfirmTitle" data-i18n="exitTitle">Exit the game?</h2>
+        <p id="exitConfirmText" data-i18n="exitText">Do you want to return to the main menu?</p>
         <div id="exitConfirmActions">
-          <button id="cancelExitBtn">Cancelar</button>
-          <button id="confirmExitBtn">Salir</button>
+          <button id="cancelExitBtn" data-i18n="cancel">Cancel</button>
+          <button id="confirmExitBtn" data-i18n="exit">Exit</button>
         </div>
       </div>
     </div>
     <div id="overlay" class="hidden">
-      <h1 id="overlayTitle">¡Victoria!</h1>
+      <h1 id="overlayTitle"></h1>
       <p id="overlaySub"></p>
-      <button id="restartBtn">Jugar de nuevo</button>
-      <button id="backToMenuBtn">Volver al menú</button>
+      <button id="restartBtn" data-i18n="playAgain">Play again</button>
+      <button id="backToMenuBtn" data-i18n="backToMenu">Back to menu</button>
     </div>
   </div>
 </div>
@@ -286,6 +352,133 @@
   const difficultyHardBtn = document.getElementById('difficultyHard');
   const modeAiBtn = document.getElementById('modeAiBtn');
   const modePvpBtn = document.getElementById('modePvpBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsOverlay = document.getElementById('settingsOverlay');
+  const languageSelect = document.getElementById('languageSelect');
+  const soundToggle = document.getElementById('soundToggle');
+  const vibrationToggle = document.getElementById('vibrationToggle');
+  const motionToggle = document.getElementById('motionToggle');
+  const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+  const applySettingsBtn = document.getElementById('applySettingsBtn');
+
+  const translations = {
+    en: {
+      menuSub: 'Choose who you want to play against', aiMode: 'Play against AI',
+      aiModeDesc: 'You (blue) vs. the machine (orange)', pvpMode: 'Play against another person',
+      pvpModeDesc: 'Same device, alternate turns', settings: 'Settings', language: 'Language',
+      sound: 'Sound', vibration: 'Vibration', reducedMotion: 'Reduce animations', cancel: 'Cancel',
+      apply: 'Apply', difficultyTitle: 'Select difficulty', easy: 'Easy', intermediate: 'Intermediate',
+      hard: 'Hard', exitTitle: 'Exit the game?', exitText: 'Do you want to return to the main menu?',
+      exit: 'Exit', playAgain: 'Play again', backToMenu: 'Back to menu', howToPlay: 'How to play',
+      helpAi: 'You control blue. Drag an orb backwards and release.', helpPvp: 'Player 1 (blue): drag an orb backwards and release.',
+      helpAiTurn: 'The AI is playing orange. Watch the field.', helpPvpTurn: 'Player 2 (orange): launch from your side of the board.',
+      turnAi: 'Your turn: drag a blue orb backwards and release', turnPvp1: 'Player 1 (blue): drag an orb and release',
+      turnPvp2: 'Player 2 (orange): drag an orb and release', aiTurn: 'Opponent turn...',
+      selectedBlue: 'Blue orb selected: ', selectedOrange: 'Orange orb selected: ',
+      playing: 'Orb in play...', pvpPlaying1: 'Player 1 orb in play...', pvpPlaying2: 'Player 2 orb in play...',
+      aiPlaying: 'The AI is playing...', victory: 'You won!', defeat: 'You lost', draw: 'Draw',
+      pvpWinner1: 'Player 1 (blue) wins', pvpWinner2: 'Player 2 (orange) wins'
+    },
+    de: {
+      menuSub: 'Wähle deinen Gegner', aiMode: 'Gegen die KI spielen',
+      aiModeDesc: 'Du (blau) gegen die Maschine (orange)', pvpMode: 'Gegen eine andere Person spielen',
+      pvpModeDesc: 'Gleiches Gerät, abwechselnde Züge', settings: 'Einstellungen', language: 'Sprache',
+      sound: 'Ton', vibration: 'Vibration', reducedMotion: 'Animationen reduzieren', cancel: 'Abbrechen',
+      apply: 'Anwenden', difficultyTitle: 'Schwierigkeit wählen', easy: 'Leicht', intermediate: 'Mittel',
+      hard: 'Schwer', exitTitle: 'Spiel verlassen?', exitText: 'Möchtest du zum Hauptmenü zurückkehren?',
+      exit: 'Verlassen', playAgain: 'Noch einmal spielen', backToMenu: 'Zum Menü', howToPlay: 'Spielanleitung',
+      helpAi: 'Du steuerst Blau. Ziehe eine Kugel zurück und lasse sie los.', helpPvp: 'Spieler 1 (blau): Ziehe eine Kugel zurück und lasse sie los.',
+      helpAiTurn: 'Die KI spielt Orange. Beobachte das Spielfeld.', helpPvpTurn: 'Spieler 2 (orange): Starte von deiner Seite des Spielfelds.',
+      turnAi: 'Du bist dran: Ziehe eine blaue Kugel zurück und lasse sie los', turnPvp1: 'Spieler 1 (blau): Ziehe eine Kugel und lasse sie los',
+      turnPvp2: 'Spieler 2 (orange): Ziehe eine Kugel und lasse sie los', aiTurn: 'Der Gegner ist am Zug...',
+      selectedBlue: 'Blaue Kugel gewählt: ', selectedOrange: 'Orange Kugel gewählt: ',
+      playing: 'Kugel im Spiel...', pvpPlaying1: 'Kugel von Spieler 1 im Spiel...', pvpPlaying2: 'Kugel von Spieler 2 im Spiel...',
+      aiPlaying: 'Die KI spielt...', victory: 'Du hast gewonnen!', defeat: 'Du hast verloren', draw: 'Unentschieden',
+      pvpWinner1: 'Spieler 1 (blau) gewinnt', pvpWinner2: 'Spieler 2 (orange) gewinnt'
+    },
+    fr: {
+      menuSub: 'Choisissez votre adversaire', aiMode: "Jouer contre l'IA",
+      aiModeDesc: 'Vous (bleu) contre la machine (orange)', pvpMode: 'Jouer contre une autre personne',
+      pvpModeDesc: 'Même appareil, tours alternés', settings: 'Paramètres', language: 'Langue',
+      sound: 'Son', vibration: 'Vibration', reducedMotion: 'Réduire les animations', cancel: 'Annuler',
+      apply: 'Appliquer', difficultyTitle: 'Choisir la difficulté', easy: 'Facile', intermediate: 'Intermédiaire',
+      hard: 'Difficile', exitTitle: 'Quitter la partie ?', exitText: 'Voulez-vous retourner au menu principal ?',
+      exit: 'Quitter', playAgain: 'Rejouer', backToMenu: 'Retour au menu', howToPlay: 'Comment jouer',
+      helpAi: "Vous contrôlez le bleu. Tirez une bille vers l'arrière puis relâchez.", helpPvp: 'Joueur 1 (bleu) : tirez une bille vers l’arrière puis relâchez.',
+      helpAiTurn: "L'IA joue l'orange. Observez le terrain.", helpPvpTurn: 'Joueur 2 (orange) : lancez depuis votre côté du terrain.',
+      turnAi: 'À vous : tirez une bille bleue vers l’arrière puis relâchez', turnPvp1: 'Joueur 1 (bleu) : tirez une bille puis relâchez',
+      turnPvp2: 'Joueur 2 (orange) : tirez une bille puis relâchez', aiTurn: 'Tour de l’adversaire...',
+      selectedBlue: 'Bille bleue sélectionnée : ', selectedOrange: 'Bille orange sélectionnée : ',
+      playing: 'Bille en jeu...', pvpPlaying1: 'Bille du joueur 1 en jeu...', pvpPlaying2: 'Bille du joueur 2 en jeu...',
+      aiPlaying: "L'IA joue...", victory: 'Vous avez gagné !', defeat: 'Vous avez perdu', draw: 'Match nul',
+      pvpWinner1: 'Le joueur 1 (bleu) gagne', pvpWinner2: 'Le joueur 2 (orange) gagne'
+    },
+    es: {
+      menuSub: 'Elige contra quién quieres jugar', aiMode: 'Jugar contra la IA',
+      aiModeDesc: 'Tú (azul) contra la máquina (naranja)', pvpMode: 'Jugar contra otra persona',
+      pvpModeDesc: 'Mismo dispositivo, turnos alternos', settings: 'Configuración', language: 'Idioma',
+      sound: 'Sonido', vibration: 'Vibración', reducedMotion: 'Reducir animaciones', cancel: 'Cancelar',
+      apply: 'Aplicar', difficultyTitle: 'Selecciona dificultad', easy: 'Fácil', intermediate: 'Intermedio',
+      hard: 'Difícil', exitTitle: '¿Salir de la partida?', exitText: '¿Quieres volver al menú principal?',
+      exit: 'Salir', playAgain: 'Jugar de nuevo', backToMenu: 'Volver al menú', howToPlay: 'Cómo jugar',
+      helpAi: 'Tú mandas el azul. Arrastra un orbe hacia atrás y suéltalo.', helpPvp: 'Jugador 1 (azul): arrastra un orbe hacia atrás y suéltalo.',
+      helpAiTurn: 'La IA juega el naranja. Observa el campo.', helpPvpTurn: 'Jugador 2 (naranja): lanza desde tu lado del tablero.',
+      turnAi: 'Tu turno: arrastra un orbe azul hacia atrás y suelta', turnPvp1: 'Jugador 1 (azul): arrastra un orbe y suelta',
+      turnPvp2: 'Jugador 2 (naranja): arrastra un orbe y suelta', aiTurn: 'Turno rival...',
+      selectedBlue: 'Orbe azul seleccionado: ', selectedOrange: 'Orbe naranja seleccionado: ',
+      playing: 'Orbe en juego...', pvpPlaying1: 'Orbe del Jugador 1 en juego...', pvpPlaying2: 'Orbe del Jugador 2 en juego...',
+      aiPlaying: 'La IA está jugando...', victory: '¡Ganaste!', defeat: 'Perdiste', draw: 'Empate',
+      pvpWinner1: 'Gana el Jugador 1 (azul)', pvpWinner2: 'Gana el Jugador 2 (naranja)'
+    }
+  };
+
+  const defaultSettings = { language: 'en', sound: false, vibration: false, reducedMotion: false };
+  let settings = loadSettings();
+
+  function loadSettings(){
+    try {
+      const stored = JSON.parse(localStorage.getItem('massBrawlSettings') || '{}');
+      const language = ['en', 'de', 'fr', 'es'].includes(stored.language) ? stored.language : defaultSettings.language;
+      return { ...defaultSettings, ...stored, language };
+    } catch (error) {
+      return { ...defaultSettings };
+    }
+  }
+
+  function t(key){
+    return (translations[settings.language] || translations.en)[key] || translations.en[key] || key;
+  }
+
+  function applyLanguage(){
+    document.documentElement.lang = settings.language;
+    document.body.classList.toggle('reduced-motion', settings.reducedMotion);
+    document.querySelectorAll('[data-i18n]').forEach((element) => {
+      element.textContent = t(element.dataset.i18n);
+    });
+    howto.title = t('howToPlay');
+    exitGame.title = t('exit');
+    exitGame.setAttribute('aria-label', t('exit'));
+    settingsBtn.title = t('settings');
+    settingsBtn.setAttribute('aria-label', t('settings'));
+    languageSelect.value = settings.language;
+    turnEl.textContent = turnLabel();
+    helpText.textContent = buildHelpText();
+  }
+
+  function syncSettingsControls(){
+    languageSelect.value = settings.language;
+    soundToggle.checked = settings.sound;
+    vibrationToggle.checked = settings.vibration;
+    motionToggle.checked = settings.reducedMotion;
+  }
+
+  function saveSettings(){
+    try {
+      localStorage.setItem('massBrawlSettings', JSON.stringify(settings));
+    } catch (error) {
+      // Preferences still work for the current session if storage is unavailable.
+    }
+  }
 
   const difficultyProfiles = {
     easy: { targetJitter: 0.24, aimOffset: 0.24, dragScale: 0.82, targetBias: 'easy' },
@@ -394,8 +587,8 @@
     selectedInventory[selectedKey] = index;
 
     const chosen = teamInventory[index];
-    const color = team === 'player' ? 'azul' : 'naranja';
-    turnEl.textContent = `Orbe ${color} seleccionado: ${chosen.bomb ? '✹' : ''}${chosen.value}`;
+    const selectedLabel = team === 'player' ? t('selectedBlue') : t('selectedOrange');
+    turnEl.textContent = `${selectedLabel}${chosen.bomb ? '✹' : ''}${chosen.value}`;
 
     renderInventory();
   }
@@ -448,23 +641,23 @@
   function turnLabel(){
     if (turn === 'player') {
       return mode === 'pvp'
-        ? 'Jugador 1 (azul): arrastra un orbe y suelta'
-        : 'Tu turno: arrastra un orbe azul hacia atrás y suelta';
+        ? t('turnPvp1')
+        : t('turnAi');
     }
     return mode === 'pvp'
-      ? 'Jugador 2 (naranja): arrastra un orbe y suelta'
-      : 'Turno rival…';
+      ? t('turnPvp2')
+      : t('aiTurn');
   }
 
   function buildHelpText(){
     if (mode === 'pvp') {
       return turn === 'player'
-        ? 'Jugador 1 (azul): lanza hacia el campo rival.'
-        : 'Jugador 2 (naranja): lanza desde tu lado del tablero.';
+        ? t('helpPvp')
+        : t('helpPvpTurn');
     }
     return turn === 'player'
-      ? 'Tú mandas el azul: arrastra un orbe hacia atrás y suéltalo.'
-      : 'La IA juega el naranja: observa el campo.';
+      ? t('helpAi')
+      : t('helpAiTurn');
   }
 
   function newGame(){
@@ -482,6 +675,7 @@
     clearTimeout(aiTimer); aiTimer = null;
     clearTimeout(finalDelayTimer); finalDelayTimer = null;
     overlay.classList.add('hidden');
+    settingsOverlay.classList.add('hidden');
     difficultyOverlay.classList.add('hidden');
     menuOverlay.classList.add('hidden');
     turnEl.textContent = turnLabel();
@@ -498,6 +692,7 @@
     started = false;
     gameOver = false;
     exitConfirmOverlay.classList.add('hidden');
+    settingsOverlay.classList.add('hidden');
     overlay.classList.add('hidden');
     difficultyOverlay.classList.add('hidden');
     menuOverlay.classList.remove('hidden');
@@ -537,8 +732,8 @@
       dragOrb.vy = diry * dist * POWER * 6 * massFactor;
       busy = true;
       turnEl.textContent = mode === 'pvp'
-        ? (turn === 'player' ? 'Orbe del Jugador 1 en juego…' : 'Orbe del Jugador 2 en juego…')
-        : (turn === 'player' ? 'Orbe en juego…' : 'La IA está jugando…');
+        ? (turn === 'player' ? t('pvpPlaying1') : t('pvpPlaying2'))
+        : (turn === 'player' ? t('playing') : t('aiPlaying'));
       orbs.push(dragOrb);
     } else if (!orbs.includes(dragOrb)) {
       inventory[dragOrb.team].push({ value: dragOrb.value, bomb: dragOrb.bomb });
@@ -833,13 +1028,13 @@
     let title;
 
     if (mode === 'pvp') {
-      if (s.player > s.ai) title = 'Gana el Jugador 1 (azul)';
-      else if (s.ai > s.player) title = 'Gana el Jugador 2 (naranja)';
-      else title = 'Empate';
+      if (s.player > s.ai) title = t('pvpWinner1');
+      else if (s.ai > s.player) title = t('pvpWinner2');
+      else title = t('draw');
     } else {
-      if (s.player > s.ai) title = '¡Ganaste!';
-      else if (s.ai > s.player) title = 'Perdiste';
-      else title = 'Empate';
+      if (s.player > s.ai) title = t('victory');
+      else if (s.ai > s.player) title = t('defeat');
+      else title = t('draw');
     }
 
     overlayTitle.textContent = title;
@@ -1066,6 +1261,28 @@
   exitGame.addEventListener('click', ()=>{ exitConfirmOverlay.classList.remove('hidden'); });
   cancelExitBtn.addEventListener('click', ()=>{ exitConfirmOverlay.classList.add('hidden'); });
   confirmExitBtn.addEventListener('click', backToMenu);
+  settingsBtn.addEventListener('click', ()=>{
+    syncSettingsControls();
+    menuOverlay.classList.add('hidden');
+    settingsOverlay.classList.remove('hidden');
+  });
+  cancelSettingsBtn.addEventListener('click', ()=>{
+    syncSettingsControls();
+    settingsOverlay.classList.add('hidden');
+    menuOverlay.classList.remove('hidden');
+  });
+  applySettingsBtn.addEventListener('click', ()=>{
+    settings = {
+      language: languageSelect.value,
+      sound: soundToggle.checked,
+      vibration: vibrationToggle.checked,
+      reducedMotion: motionToggle.checked
+    };
+    saveSettings();
+    applyLanguage();
+    settingsOverlay.classList.add('hidden');
+    menuOverlay.classList.remove('hidden');
+  });
   modeAiBtn.addEventListener('click', ()=>{ showDifficultyOverlay(); });
   modePvpBtn.addEventListener('click', ()=>{ mode='pvp'; menuOverlay.classList.add('hidden'); newGame(); });
   difficultyEasyBtn.addEventListener('click', ()=>{ startAiGame('easy'); });
@@ -1082,6 +1299,8 @@
     howto.style.display = 'flex';
   });
 
+  applyLanguage();
+  syncSettingsControls();
   selectDifficultyButton(difficulty);
 
   // Muestra el tablero vacío detrás del menú antes de elegir modo
