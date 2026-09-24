@@ -506,6 +506,8 @@
   const BOMB_PROBABILITY = 0.10;
   const BOMB_RADIUS_BASE = 34;
   const BOMB_RADIUS_PER_MASS = 6;
+  const ORB_BASE_RADIUS = 10;
+  const ORB_RADIUS_PER_MASS = 6;
   const FINAL_VISUAL_DELAY_SECONDS = 2;
 
   let orbs = [];
@@ -630,7 +632,7 @@
   function createInventoryOrb(team, item, point){
     const value = item.value ?? item;
     const bomb = item.bomb ?? false;
-    const r = 14 + value*1.6;
+    const r = ORB_BASE_RADIUS + value * ORB_RADIUS_PER_MASS;
     return {
       id: `orb${nextOrbId++}`, team, value, bomb, r,
       bombRadius: bomb ? BOMB_RADIUS_BASE + value * BOMB_RADIUS_PER_MASS : 0,
